@@ -80,12 +80,40 @@ func (c *crawler) runInfoHashTriage(ctx context.Context) {
 				foundTorrents[t.InfoHash] = *t
 			}
 
+			storedFileCounts := make(map[protocol.ID]uint, len(foundTorrents))
+			if len(foundTorrents) > 0 {
+				type storedFilesRow struct {
+					InfoHash    protocol.ID
+					StoredCount uint
+				}
+
+				var storedResults []storedFilesRow
+				torrentFilesQuery := c.dao.TorrentFile.WithContext(ctx)
+				if len(valuers) > 0 {
+					torrentFilesQuery = torrentFilesQuery.Where(
+						c.dao.TorrentFile.InfoHash.In(valuers...),
+					)
+				}
+
+				if storedErr := torrentFilesQuery.UnderlyingDB().
+					Select("info_hash, COUNT(*) AS stored_count").
+					Group("info_hash").
+					Find(&storedResults).Error; storedErr != nil {
+					c.logger.Errorf("failed to count stored torrent files: %s", storedErr.Error())
+				} else {
+					for _, row := range storedResults {
+						storedFileCounts[row.InfoHash] = row.StoredCount
+					}
+				}
+			}
+
 			for h := range filteredHashMap {
 				r := reqMap[h]
 				if t, ok := foundTorrents[r.infoHash]; !ok ||
 					t.FilesStatus == model.FilesStatusNoInfo ||
 					(t.FilesStatus != model.FilesStatusSingle && !t.FilesCount.Valid) ||
-					(t.FilesStatus == model.FilesStatusOverThreshold && t.FilesCount.Uint <= c.saveFilesThreshold) {
+					(t.FilesStatus == model.FilesStatusOverThreshold &&
+						storedFileCounts[r.infoHash] < c.saveFilesThreshold) {
 					select {
 					case <-ctx.Done():
 						return
