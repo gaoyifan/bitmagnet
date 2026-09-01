@@ -43,6 +43,11 @@ func New(p Params) Result {
 	lastResponses := &concurrency.AtomicValue[LastResponses]{}
 	collector := newPrometheusCollector()
 	ls := lazy.New(func() (Server, error) {
+		localAddress, addressErr := netip.ParseAddr(p.Config.LocalAddress)
+		if addressErr != nil || !localAddress.Is4() {
+			return nil, fmt.Errorf("invalid IPv4 DHT server local address %q", p.Config.LocalAddress)
+		}
+
 		s := queryLimiter{
 			server: prometheusServerWrapper{
 				prometheusCollector: collector,
@@ -50,7 +55,7 @@ func New(p Params) Result {
 					baseServer: &server{
 						stopped: make(chan struct{}),
 						localAddr: netip.AddrPortFrom(
-							netip.IPv4Unspecified(),
+							localAddress,
 							p.Config.Port,
 						),
 						socket:           NewSocket(),

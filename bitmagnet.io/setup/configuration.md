@@ -16,6 +16,7 @@ nav_order: 2
 - `tmdb.enabled` (default: `true`): Specify `false` to disable the TMDB API integration.
 - `dht_crawler.save_files_threshold` (default: `100`): Some torrents contain many thousands of files, which impacts performance and uses a lot of database disk space. This parameter sets a maximum limit for the number of files saved by the crawler with each torrent.
 - `dht_crawler.save_pieces` (default: `false`): If true, the DHT crawler will save the pieces bytes from the torrent metadata. The pieces take up quite a lot of space, and aren't currently very useful, but they may be used by future features.
+- `dht_server.local_address` (default: `0.0.0.0`): The IPv4 address where the DHT UDP socket listens. Set this to a specific local address to keep the node's DHT identity on one network interface.
 - `log.level` (default: `info`): If you're developing or just curious then you may want to set this to `debug`; note that `debug` output will be very verbose.
 - `log.development` (default: `false`): If you're developing you may want to enable this flag to enable more verbose output such as stack traces.
 - `log.json` (default: `false`): By default logs are output in a pretty format with colors; enable this flag if you'd prefer plain JSON.
